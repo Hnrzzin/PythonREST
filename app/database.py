@@ -29,3 +29,14 @@ def entrarBanco():
 
     except Exception as error:
         print(f'Erro ao conectar ao banco de dados: {error}')
+        
+def sairBanco():
+    try:
+        if conexao.is_connected():
+            tbltemp.close()
+            conexao.close()
+            print('Conexão com o banco de dados encerrada.')
+        else:
+            print('Nenhuma conexão ativa para encerrar.')
+    except Exception as error:
+        print(f'Erro ao encerrar a conexão: {error}')
