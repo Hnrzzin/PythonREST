@@ -1,0 +1,10 @@
+requests neccesary for the API to function
+fastapi
+uvicorn
+pydantic
+slqconnector
+sqlalchemy
+
+
+infs:
+__init__.py serve pra criar um modulo
