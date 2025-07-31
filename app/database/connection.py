@@ -42,7 +42,9 @@ class Database:
         try:
             self.entrar_banco()
             self.tbltemp.execute('SELECT * FROM info;')
-            contatos = self.tbltemp.fetchall()
+            contatos_raw = self.tbltemp.fetchall()
+            colunas = [key[0] for key in self.tbltemp.description]  # Obtém os nomes das colunas
+            contatos = [dict(zip(colunas, value)) for value in contatos_raw]  # Junta colunas e dados
             return contatos
         except mysql.connector.Error as err:
             print(f'Erro ao buscar contatos: {err} ({type(err)})')

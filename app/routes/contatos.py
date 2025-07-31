@@ -1,11 +1,18 @@
 from fastapi import APIRouter
 from app.database.connection import Database
 from fastapi import HTTPException
+from app.schemas.contato_schema import ContatoSchema
+from typing import List
 
 router = APIRouter() 
 banco = Database()
 
-@router.get("/contatos")
+"""
+Rota que retorna todos os contatos cadastrados.
+Parâmetros opcionais: skip e limit para paginação.
+"""
+
+@router.get("/contatos", response_model=List[ContatoSchema])  #Aqui define como será o modelo JSON de resposta
 async def get_contatos():
     try:
         contatos = banco.todos_contatos() #instancia o metodo que busca os contatos (todos_contatos)
