@@ -51,3 +51,19 @@ class Database:
             raise
         finally:
             self.sair_banco()
+            
+    def contato_id(self, id:int):
+        try:
+           self.entrar_banco()
+           self.tbltemp.execute('SELECT * FROM info WHERE id = %s', (id,))
+           contatos_raw = self.tbltemp.fetchone()
+           colunas = [key[0] for key in self.tbltemp.description]  # Obtém os nomes das colunas
+           contatos = [dict(zip(colunas, value)) for value in contatos_raw]  # Junta colunas e dados
+           if not contatos:
+               return None  # Retorna None se não encontrar o contato
+           return contatos
+        except mysql.connector.Error as err:
+            print(f'Erro ao buscar contato por ID: {err} ({type(err)})')
+            raise
+        finally:
+            self.sair_banco()

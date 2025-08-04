@@ -1,6 +1,8 @@
 from fastapi import FastAPI
-from app.routes import contatos
 
 app = FastAPI()
 
-app.include_router(contatos.router)
+from contatos import router
+
+app.include_router(router) #inclui as rotas no aplicativo FastAPI
+

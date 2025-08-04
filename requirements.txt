@@ -3,14 +3,8 @@ fastapi
 uvicorn
 pydantic
 slqconnector
+passlib[bcrypt]
+python-multipart
+python-jose
+python-dotenv
 
-
-
-infs:
-__init__.py serve pra criar um modulo
-main.py
-   └─> importa rotas (routes)
-           └─> rotas usam schemas e funções do database (crud)
-                           └─> database conecta no banco e manipula dados
-async serve pra não deixar o python "travado" enquanto espera por uma resposta do banco de dados
-mesngem de erro: raise HTTPException(status_code=404, detail="Nenhum dado encontrado")
