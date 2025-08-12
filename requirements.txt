@@ -7,4 +7,5 @@ passlib[bcrypt]
 python-multipart
 python-jose
 python-dotenv
-
+sqlalchemy
+alembic 

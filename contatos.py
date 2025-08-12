@@ -1,5 +1,6 @@
 from fastapi import APIRouter
-
+from model import postContato  # Import your Base from the model module
+import re #experessão regular para validar o telefone/email/cpf...
 
 router = APIRouter(prefix="/contatos", tags=["contatos"]) 
 #banco = Database()
@@ -26,9 +27,24 @@ async def obter_contato(contato_id: int):
 Rota que cria um novo contato.
 """
 
-@router.post("/create") #decorador (@) que define a rota POST para criar um novo contato
-async def criar_contato():
-    return {"message": "Criando um novo contato"}
+
+@router.post("/create")
+async def criar_contato(nome: str, email: str, telefone: str):
+    if not nome or not email or not telefone:
+        return {"message": "Nome, email e telefone são obrigatórios."}
+    
+    if len(nome) < 4:
+        return {"message": "O nome deve ter pelo menos 4 dígitos."}
+    
+    telefone_limpo = re.sub(r"\D", "", telefone)
+    if len(telefone_limpo) != 11 or not telefone_limpo.isdigit():
+        return {"message": "O telefone deve ter exatamente 11 dígitos numéricos."}
+    
+    if '@' not in email:
+        return {"message": "O email deve conter '@'"}
+    
+    resultado = postContato(nome, email, telefone_limpo)
+    return resultado
 
 """
 Rota que atualiza um contato existente.

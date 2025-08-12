@@ -1,2 +1,5 @@
 uvicorn main:app --reload -> cria um dominio
 rotas: GET,POST,PUT,DELETE  
+alembic init alembic 
+alembic revision --autogenerate -m "<msg>
+alembic upgrade head                                                                                                                                                                                                                                                                                                                                    
