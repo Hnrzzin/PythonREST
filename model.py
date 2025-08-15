@@ -1,5 +1,11 @@
 import mysql.connector
 from response import ok, bad_request, server_error
+from passlib.context import CryptContext
+from dotenv import load_dotenv
+import os
+load_dotenv()
+SECRET_KEY = os.getenv("SECRET_KEY")
+bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def entrarBanco():
    
@@ -150,6 +156,51 @@ def deleteContato(contato_id: int):
     
     except Exception as error:
         return server_error(f"Erro ao deletar contato: {str(error)}")
+    
+    finally:
+        fecharConexao()
+    
+def postUsuario(nome: str, email: str, senha_hash: str):
+    try:
+        entrarBanco()
+        tbltemp = conexao.cursor(dictionary=True)  # dictionary=True para acessar por nome da coluna
+        
+        # Verifica email
+        tbltemp.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
+        if tbltemp.fetchone():
+            return bad_request("Email já cadastrado.")
+        
+        # Se chegou até aqui, pode inserir
+        tbltemp.execute(
+            "INSERT INTO usuarios (nome, email, senha_hash) VALUES (%s, %s, %s)",
+            (nome, email, senha_hash)
+        )
+        conexao.commit()
+        
+        return ok("Usuário criado com sucesso.", {"nome": nome, "email": email})
+    
+    except Exception as error:
+        return server_error(f"Erro ao inserir usuário: {str(error)}")
+    
+    finally:
+        fecharConexao()
+    
+def loginUsuario(email: str):
+    try:
+        entrarBanco()
+        tbltemp = conexao.cursor(dictionary=True)
+        
+        # Busca usuário pelo email
+        tbltemp.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
+        usuario_login = tbltemp.fetchone()
+        
+        if not usuario_login:
+            return None  # Retorna None se não existe usuário
+        
+        return usuario_login  # Retorna o dict completo: id, nome, email, senha_hash
+    
+    except Exception as error:
+        return None  
     
     finally:
         fecharConexao()

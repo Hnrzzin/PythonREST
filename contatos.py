@@ -4,7 +4,7 @@ from typing import Optional
 from model import postContato, getContatos, getContatoById, updateContato, deleteContato
 import re
 from response import ok, bad_request, server_error
-
+from schema import Contato   
 router = APIRouter(prefix="/contatos", tags=["contatos"]) 
 
 # -----------------------
@@ -12,10 +12,7 @@ router = APIRouter(prefix="/contatos", tags=["contatos"])
 # -----------------------
 # ps: o ID não é necessário no corpo da requisição, pois é gerado automaticamente
 # ps: 
-class Contato(BaseModel):
-    nome: Optional[str] = None
-    email: Optional[str] = None
-    telefone: Optional[str] = None
+
 
 # -----------------------
 # Rota que retorna todos os contatos
@@ -83,7 +80,7 @@ async def atualizar_contato(contato_id: int, contato: Contato):
             if len(telefone_limpo) != 11:
                 return bad_request("Telefone inválido. Deve ter 11 números.")
         
-        if '@' not in contato.email:
+        if contato.email and '@' not in contato.email:
             return bad_request("Email inválido. Deve conter '@'.")
         
         return updateContato(contato_id, contato.nome, contato.email, telefone_limpo)
