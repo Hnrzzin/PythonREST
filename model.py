@@ -3,10 +3,20 @@ from response import ok, bad_request, server_error
 from passlib.context import CryptContext
 from dotenv import load_dotenv
 import os
+
+#=======================================================================
+#                   Importa as variáveis de ambiente
+#========================================================================
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+#=======================================================================
+#                Funçoes para manipulação do banco de dados
+#========================================================================
+#=======================================================================
+#                Abre e fecha a conexão com o banco de dados
+#========================================================================
 def entrarBanco():
    
     try:
@@ -14,7 +24,7 @@ def entrarBanco():
         conexao = mysql.connector.connect(
             host='localhost',   
             user='root',
-            password='Henry45*1',
+            password='Henry45*', # Certifique-se de que esta senha está correta ou use variáveis de ambiente
             database='contacts',
             auth_plugin ='mysql_native_password'
             )
@@ -26,7 +36,7 @@ def entrarBanco():
             tbltemp = conexao.cursor()
             tbltemp.execute('SELECT DATABASE()')
             nameBanco = tbltemp.fetchone()  
-            global tabletupla
+            global tabletupla # Esta variável não está sendo usada, pode ser removida se não for necessária
             return {"mensagem": f"Conectado ao banco de dados: {nameBanco[0]}"}
         else:
             return {"mensagem": "Erro ao conectar ao banco de dados."}
@@ -35,13 +45,16 @@ def entrarBanco():
         return {"mensagem":"Erro ao conectar ao banco de dados:" + str(error)}
 
 def fecharConexao():
-    if conexao.is_connected():
+    if 'conexao' in globals() and conexao.is_connected(): # Verifica se 'conexao' existe e está conectada
         tbltemp.close()
         conexao.close()
         return {"mensagem": "Conexão com o banco de dados fechada."}
     else:
         return {"mensagem": "Nenhuma conexão aberta para fechar."}
 
+#=======================================================================
+#                   Cria e manipula os contatos
+#========================================================================
 def postContato(nome: str, email: str, telefone: str):
     try:
         entrarBanco()
@@ -71,7 +84,9 @@ def postContato(nome: str, email: str, telefone: str):
     
     finally:
         fecharConexao()
-    
+#=======================================================================
+
+#=======================================================================    
 def getContatos():
     try:
         entrarBanco()
@@ -83,7 +98,9 @@ def getContatos():
         return server_error(f"Erro ao listar contatos: {str(error)}")
     finally:
         fecharConexao()
+#=======================================================================
 
+#=======================================================================  
 def getContatoById(contato_id: int):
     try:
         entrarBanco()
@@ -98,7 +115,9 @@ def getContatoById(contato_id: int):
         return server_error(f"Erro ao obter contato: {str(error)}")
     finally:
         fecharConexao()
-        
+#=======================================================================
+
+#=======================================================================          
 def updateContato(contato_id: int, nome: str = None, email: str = None, telefone: str = None):
     try:
         entrarBanco()
@@ -137,7 +156,9 @@ def updateContato(contato_id: int, nome: str = None, email: str = None, telefone
     
     finally:
         fecharConexao()
-        
+#=======================================================================
+
+#=======================================================================          
 def deleteContato(contato_id: int):
     try:
         entrarBanco()
@@ -159,7 +180,9 @@ def deleteContato(contato_id: int):
     
     finally:
         fecharConexao()
-    
+#=======================================================================
+#                          Cria os usuários
+#=======================================================================      
 def postUsuario(nome: str, email: str, senha_hash: str):
     try:
         entrarBanco()
@@ -184,7 +207,9 @@ def postUsuario(nome: str, email: str, senha_hash: str):
     
     finally:
         fecharConexao()
-    
+#=======================================================================
+#                         Faz o login do usuário
+#=======================================================================      
 def loginUsuario(email: str):
     try:
         entrarBanco()
@@ -204,3 +229,23 @@ def loginUsuario(email: str):
     
     finally:
         fecharConexao()
+#=======================================================================
+#            Busca o usuário pelo ID (usado para verificar token)
+#=======================================================================  
+def getUsuarioById(usuario_id: int): # É chamada para verificar o usuário do token
+    try:
+        entrarBanco()
+        tbltemp = conexao.cursor(dictionary=True)
+        
+        tbltemp.execute("SELECT * FROM usuarios WHERE id = %s", (usuario_id,))
+        usuario = tbltemp.fetchone()
+        
+        if usuario:
+            return usuario  # Retorna o dict completo: id, nome, email, senha_hash
+        else:
+            return None
+    except Exception as error:
+        return None
+    finally:
+        fecharConexao()
+

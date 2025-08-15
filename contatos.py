@@ -99,4 +99,3 @@ async def excluir_contato(contato_id: int):
             return deleteContato(contato_id)
     except Exception as e:
         return server_error(f"Erro ao excluir contato: {str(e)}")
-    

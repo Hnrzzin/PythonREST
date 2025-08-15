@@ -1,6 +1,8 @@
 from fastapi import status
 from fastapi.responses import JSONResponse
-
+#=======================================================================
+#                Mensagem de sucesso, erro e acesso negado
+#========================================================================
 def ok(message: str, data=None):
     return JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -35,4 +37,17 @@ def server_error(message: str):
                 "HTTPStatus": "Internal Server Error",
                 "HTTPStatusCode": status.HTTP_500_INTERNAL_SERVER_ERROR
                 }
+    )
+
+def acesso_negado(message: str):
+    return JSONResponse(
+        status_code=status.HTTP_403_FORBIDDEN,
+        content={
+                "message": message,
+                "data": None,
+                "status": "access_denied",
+                "HTTPStatus": "Forbidden",
+                "HTTPStatusCode": status.HTTP_403_FORBIDDEN
+                }
+                
     )
