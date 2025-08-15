@@ -4,13 +4,21 @@ from typing import Optional
 from response import ok, bad_request, server_error
 import re
 from schema import Usuario, Login
-from main import bcrypt_context
+from main import bcrypt_context, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY
 from model import postUsuario, loginUsuario
+from jose import jwt, JWTError
+from datetime import datetime, timedelta, timezone
 
 router = APIRouter(prefix="/autenticacao", tags=["autenticacao"]) 
 
-def criar_token(id_usuario: int):
-    token = f"fsdfsddg997ff{ id_usuario}" 
+def criar_token(id_usuario: int, tempo_expiracao =timedelta(minutes =  ACCESS_TOKEN_EXPIRE_MINUTES)):
+    horario_expiracao = datetime.now(timezone.utc) + tempo_expiracao
+    info_token = {
+        "sub": id_usuario, #identificador do usuário
+        "exp": horario_expiracao #data de expiração do token
+    }
+    JWT_codificado = jwt.encode(info_token, SECRET_KEY,ALGORITHM)
+    token = JWT_codificado
     return token
 
     
@@ -50,8 +58,10 @@ async def login_usuario(login: Login):
         if not bcrypt_context.verify(login.senha, usuario['senha_hash']): #verifica se a senha é a mesma que foi cadastrada 
             return bad_request("Senha incorreta.")
         access_token = criar_token(usuario['id'])
+        #refresh_token = criar_token(usuario['id'], duracao_token= timedelta(days = 3))  # Implementar refresh token se necessário
         return ok("Login realizado com sucesso.", {
             "access_token": access_token,
+            #"refresh_token": refresh_token,
             "token_type": "bearer"
         })
     except Exception as e:
