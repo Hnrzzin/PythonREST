@@ -21,23 +21,18 @@ def entrarBanco():
    
     try:
         global conexao
+        global tbltemp
         conexao = mysql.connector.connect(
             host='localhost',   
             user='root',
-            password='Henry45*', # Certifique-se de que esta senha está correta ou use variáveis de ambiente
+            password='Henry45*1', # Certifique-se de que esta senha está correta ou use variáveis de ambiente
             database='contacts',
             auth_plugin ='mysql_native_password'
             )
 
         if conexao.is_connected():
-            global tbltemp
-            infbanco = conexao.get_server_info()
             
-            tbltemp = conexao.cursor()
-            tbltemp.execute('SELECT DATABASE()')
-            nameBanco = tbltemp.fetchone()  
-            global tabletupla # Esta variável não está sendo usada, pode ser removida se não for necessária
-            return {"mensagem": f"Conectado ao banco de dados: {nameBanco[0]}"}
+            return conexao, tbltemp
         else:
             return {"mensagem": "Erro ao conectar ao banco de dados."}
 
@@ -45,7 +40,7 @@ def entrarBanco():
         return {"mensagem":"Erro ao conectar ao banco de dados:" + str(error)}
 
 def fecharConexao():
-    if 'conexao' in globals() and conexao.is_connected(): # Verifica se 'conexao' existe e está conectada
+    if conexao in globals() and conexao.is_connected(): # Verifica se 'conexao' existe e está conectada
         tbltemp.close()
         conexao.close()
         return {"mensagem": "Conexão com o banco de dados fechada."}
@@ -210,7 +205,7 @@ def postUsuario(nome: str, email: str, senha_hash: str):
 #=======================================================================
 #                         Faz o login do usuário
 #=======================================================================      
-def loginUsuario(email: str):
+def loginUsuario(email: str): #checa somente se o email existe no banco de dados
     try:
         entrarBanco()
         tbltemp = conexao.cursor(dictionary=True)
@@ -248,4 +243,3 @@ def getUsuarioById(usuario_id: int): # É chamada para verificar o usuário do t
         return None
     finally:
         fecharConexao()
-

@@ -6,6 +6,7 @@ from main import bcrypt_context, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_
 from model import postUsuario, loginUsuario, getUsuarioById # Importa getUsuarioById
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, timezone
+from fastapi.security import OAuth2PasswordRequestForm
 
 #========================================================================
 #           Cria um roteador para as rotas de autenticação
@@ -31,7 +32,7 @@ def criar_token(id_usuario: int, duracao_token: timedelta = timedelta(minutes=AC
 async def decodificar_token(token: str = Depends(oauth2_schema)):
     try:
         info_usuario = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = info_usuario.get("sub")
+        user_id = int(info_usuario.get("sub"))
         if user_id is None:
             raise JWTError("Token inválido: ID do usuário não encontrado.")
         return int(user_id) # Retorna o ID do usuário validado como parametro para o refresh_token
@@ -71,13 +72,18 @@ async def criar_usuario(usuario: Usuario):
 @router.post("/login")
 async def login_usuario(login: Login):
     try:
-        usuario = loginUsuario(login.email)
+        if not login.email or not login.senha:
+            return bad_request("Email e senha são obrigatórios.")
+        
+        usuario = loginUsuario(login.email) #checa apenas se o email existe no banco de dados
         
         if usuario is None:
             return bad_request("Usuário não encontrado.")
         if not bcrypt_context.verify(login.senha, usuario['senha_hash']): #verifica se a senha é a mesma que foi cadastrada 
             return bad_request("Senha incorreta.")
-        access_token = criar_token(usuario['id'])
+        # Se o usuário for encontrado e a senha for verificada, cria o token
+        # O ID do usuário é passado como parâmetro para criar_token
+        access_token = criar_token(usuario['id']) # retorna o token de acesso codificado
         refresh_token = criar_token(usuario['id'], duracao_token= timedelta(days = 3))  # Implementar refresh token se necessário
         return ok("Login realizado com sucesso.", {
             "access_token": access_token,
@@ -87,7 +93,7 @@ async def login_usuario(login: Login):
     except Exception as e:
         return server_error(f"Erro ao realizar login: {str(e)}")
 #=======================================================================
-#                       Faz a atualização do token
+#           Faz a atualização do access token com o refresh token 
 #========================================================================    
 @router.get("/refresh")
 async def refresh_token(id_atual: int = Depends(decodificar_token)): # Usa a dependência para obter o ID do usuário
@@ -109,3 +115,25 @@ async def refresh_token(id_atual: int = Depends(decodificar_token)): # Usa a dep
     except Exception as e:  # Captura qualquer outra exceção
         return server_error(f"Erro ao atualizar o token: {str(e)}")
 
+#======================================================================
+#                     Login da página da Fastapi
+#======================================================================
+@router.post("/login-form")
+async def login_usuario(dados_form: OAuth2PasswordRequestForm = Depends()): # ao invés de usar schema Login, usa OAuth2PasswordRequestForm para compatibilidade com o FastAPI
+    # O FastAPI automaticamente valida o email e a senha
+    try:
+        if not dados_form.username or not dados_form.password:
+            return bad_request("Email e senha são obrigatórios.")
+        usuario = loginUsuario(dados_form.username)
+        
+        if usuario is None:
+            return bad_request("Usuário não encontrado.")
+        if not bcrypt_context.verify(dados_form.password, usuario['senha_hash']): #verifica se a senha é a mesma que foi cadastrada 
+            return bad_request("Senha incorreta.")
+        access_token = criar_token(usuario['id'])
+        return ok("Login realizado com sucesso.", {
+            "access_token": access_token,
+            "token_type": "bearer"
+        })
+    except Exception as e:
+        return server_error(f"Erro ao realizar login: {str(e)}")

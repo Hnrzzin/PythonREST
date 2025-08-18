@@ -10,6 +10,7 @@ class Usuario(BaseModel):
     senha_hash: Optional[str] = None
 
 class Contato(BaseModel):
+    
     nome: Optional[str] = None
     email: Optional[str] = None
     telefone: Optional[str] = None

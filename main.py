@@ -16,10 +16,11 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30)) 
 #                   Cria o contexto de criptografia
 #========================================================================
 app = FastAPI()
-#bycypt se trata de um algoritmo de hash para senhas
+# bycypt se trata de um algoritmo de hash para senhas
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-#oauth2 se trata de um esquema de autenticação que usa tokens
-oauth2_schema = OAuth2PasswordBearer(tokenUrl="autenticacao/login")
+# oauth2 se trata de um esquema de autenticação que usa tokens
+# Cria o formulario de autenticação OAuth2
+oauth2_schema = OAuth2PasswordBearer(tokenUrl="autenticacao/login-form")
 
 from contatos import router
 from autenticacao import router as auth_router
