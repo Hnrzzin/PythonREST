@@ -1,8 +1,35 @@
+"""
+Arquivo de Dependências do Projeto - requirements.txt
+
+Lista todas as dependências Python necessárias para o projeto
+com versões específicas para garantir compatibilidade.
+
+Última atualização: 2024-01-15
+
+Instalação:
+    pip install -r requirements.txt
+"""
+
+# Framework principal para construção da API
 fastapi==0.104.1
+
+# Servidor ASGI para execução da aplicação
 uvicorn[standard]==0.24.0
+
+# Implementação de JWT (JSON Web Tokens) para autenticação
 python-jose[cryptography]==3.3.0
+
+# Biblioteca para hash de senhas com suporte a bcrypt
 passlib[bcrypt]==1.7.4
+
+# Conector oficial MySQL para Python
 mysql-connector-python==8.2.0
+
+# Suporte a formulários multipart (upload de arquivos)
 python-multipart==0.0.6
+
+# Validação de dados e modelos com tipagem estática
 pydantic==2.5.0
+
+# Gerenciamento de variáveis de ambiente via arquivo .env
 python-dotenv==1.0.0

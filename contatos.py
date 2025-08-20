@@ -1,62 +1,113 @@
-from fastapi import APIRouter
+"""
+Módulo de Gerenciamento de Contatos - API RESTful
+
+Fornece endpoints CRUD completos para operações com contatos.
+Todos os endpoints requerem autenticação JWT válida.
+
+Autor: Henrique Teixeira
+Versão: 1.0.0
+Data: 2024-01-15
+
+Segurança:
+    - Autenticação JWT obrigatória em todas as rotas
+    - Validação de propriedade (usuário só acessa seus contatos)
+    - Validação de dados de entrada
+"""
+
+from fastapi import APIRouter, Depends
 from model import postContato, getContatos, getContatoById, updateContato, deleteContato, getUsuarioById
 import re
 from response import ok, bad_request, server_error
-from schema import Contato   
+from schema import Contato
 from autenticacao import decodificar_token
-from fastapi import Depends
 
-router = APIRouter(prefix="/contatos", tags=["contatos"], dependencies= [Depends(decodificar_token)]) # Cria um roteador para as rotas de contatos
+# =============================================================================
+#                           CONFIGURAÇÃO DO ROTEADOR
+# =============================================================================
+router = APIRouter(
+    prefix="/contatos",
+    tags=["contatos"],
+    dependencies=[Depends(decodificar_token)]  # Autenticação obrigatória
+)
 
-# -----------------------
-# Modelo para validar entrada de dados
-# -----------------------
-# ps: o ID não é necessário no corpo da requisição, pois é gerado automaticamente
-# ps: os dados que são acessados (ex: usuario["id"]) são aqueles que vem de dicionarios, já quando se usa (ex: usuario.id) é porque o dado é um objeto, e não um dicionário
+# =============================================================================
+#                           ENDPOINTS DE CONTATOS
+# =============================================================================
 
-
-# -----------------------
-# Rota que retorna todos os contatos
-# -----------------------
 @router.get("/list")
-async def listar_contatos():
+async def listar_contatos(id_usuario_logado: int = Depends(decodificar_token)):
+    """
+    Lista todos os contatos do usuário autenticado.
+    
+    Args:
+        id_usuario_logado (int): ID do usuário extraído do token JWT
+    
+    Returns:
+        JSONResponse: Lista de contatos ou mensagem de erro
+    """
     try:
-        return getContatos()
+        contatos = getContatos(id_usuario_logado)
+        if contatos is None:
+            return server_error("Erro interno ao buscar contatos.")
+        return ok("Contatos listados com sucesso.", contatos)
     except Exception as e:
         return server_error(f"Erro ao listar contatos: {str(e)}")
 
-# -----------------------
-# Rota que retorna um contato pelo ID
-# -----------------------
 @router.get("/list/{contato_id}")
 async def obter_contato_ID(contato_id: int, id_usuario_logado: int = Depends(decodificar_token)):
+    """
+    Obtém um contato específico pelo ID.
+    
+    Args:
+        contato_id (int): ID do contato a ser recuperado
+        id_usuario_logado (int): ID do usuário autenticado
+    
+    Returns:
+        JSONResponse: Dados do contato ou mensagem de erro
+    
+    Validations:
+        - ID do contato deve ser positivo
+        - Contato deve pertencer ao usuário autenticado
+    """
     try:
-        # busca somente o contato do usuário logado
-        if not contato_id or contato_id <= 0:
+        if contato_id <= 0:
             return bad_request("ID inválido. Deve ser positivo.")
-        # Validação de usuário logado
-        usuario = getUsuarioById(id_usuario_logado)  
-        if not usuario:
-            return bad_request("Usuário não encontrado.")
         
-        # usuario["id"] representa o dono do contato no banco de dados, já id_usuario_logado representa o usuário que está tentando criar o contato
-        if usuario["id"] != id_usuario_logado:
-            return bad_request("Você não tem permissão para realizar esta ação.")
+        contato = getContatoById(contato_id, id_usuario_logado)
+        if contato is None:
+            return server_error("Erro interno ao buscar contato.")
         
-        return getContatoById(contato_id)
+        if not contato:
+            return bad_request("Contato não encontrado ou acesso não autorizado.")
+        
+        return ok("Contato obtido com sucesso.", contato)
     except Exception as e:
         return server_error(f"Erro ao obter contato: {str(e)}")
 
-# -----------------------
-# Rota que cria um novo contato
-# -----------------------
 @router.post("/create")
 async def criar_contato(contato: Contato, id_usuario_logado: int = Depends(decodificar_token)):
+    """
+    Cria um novo contato para o usuário autenticado.
+    
+    Args:
+        contato (Contato): Dados do novo contato
+        id_usuario_logado (int): ID do usuário autenticado
+    
+    Returns:
+        JSONResponse: Contato criado ou mensagem de erro
+    
+    Validations:
+        - Nome mínimo de 4 caracteres
+        - Telefone com 11 dígitos numéricos
+        - Email com formato válido
+        - Verificação de duplicatas
+    """
     try:
-        # --- Validações obrigatórias ---
+        # Validação de nome
         if not contato.nome or len(contato.nome) < 4:
             return bad_request("Nome inválido. Deve ter pelo menos 4 caracteres.")
         
+        # Validação de telefone
         if not contato.telefone:
             return bad_request("Telefone obrigatório.")
         
@@ -64,82 +115,100 @@ async def criar_contato(contato: Contato, id_usuario_logado: int = Depends(decod
         if len(telefone_limpo) != 11:
             return bad_request("Telefone inválido. Deve ter 11 números.")
         
+        # Validação de email
         if not contato.email or "@" not in contato.email:
             return bad_request("Email inválido. Insira um email válido.")
 
-        # Validação de usuário logado
-        usuario = getUsuarioById(id_usuario_logado)  
-        if not usuario:
-            return bad_request("Usuário não encontrado.")
-        
-        # usuario["id"] representa o dono do contato no banco de dados, já id_usuario_logado representa o usuário que está tentando criar o contato
-        if usuario["id"] != id_usuario_logado:
-            return bad_request("Você não tem permissão para realizar esta ação.")
-
-        # Criação do contato 
+        # Criação do contato no banco
         novo_contato = postContato(
             contato.nome,
             contato.email,
             telefone_limpo,
-            id_usuario_logado  # garante vínculo com o dono
+            id_usuario_logado
         )
+        
+        if novo_contato is None:
+            return bad_request("Telefone ou email já cadastrado.")
 
         return ok("Contato criado com sucesso.", novo_contato)
 
     except Exception as e:
         return server_error(f"Erro ao criar contato: {str(e)}")
 
-# -----------------------
-# Rota que atualiza um contato
-# -----------------------
 @router.put("/update/{contato_id}")
 async def atualizar_contato(contato_id: int, contato: Contato, id_usuario_logado: int = Depends(decodificar_token)):
+    """
+    Atualiza um contato existente.
+    
+    Args:
+        contato_id (int): ID do contato a ser atualizado
+        contato (Contato): Dados atualizados do contato
+        id_usuario_logado (int): ID do usuário autenticado
+    
+    Returns:
+        JSONResponse: Mensagem de sucesso ou erro
+    
+    Validations:
+        - ID do contato deve ser positivo
+        - Campos opcionais são validados se fornecidos
+        - Contato deve pertencer ao usuário
+    """
     try:
         if contato_id <= 0:
             return bad_request("ID inválido. Deve ser positivo.")
         
-        # Validação dos campos se foram enviados
+        # Validação condicional do nome
         if contato.nome and len(contato.nome) < 4:
             return bad_request("Nome inválido. Deve ter pelo menos 4 caracteres.")
         
+        # Validação condicional do telefone
         telefone_limpo = None
         if contato.telefone:
             telefone_limpo = re.sub(r"\D", "", contato.telefone)
             if len(telefone_limpo) != 11:
                 return bad_request("Telefone inválido. Deve ter 11 números.")
         
+        # Validação condicional do email
         if contato.email and '@' not in contato.email:
             return bad_request("Email inválido. Deve conter '@'.")
-        
-        # Validação de usuário logado
-        usuario = getUsuarioById(id_usuario_logado)  
-        if not usuario:
-            return bad_request("Usuário não encontrado.")
-        
-        # usuario["id"] representa o dono do contato no banco de dados, já id_usuario_logado representa o usuário que está tentando criar o contato
-        if usuario["id"] != id_usuario_logado:
-            return bad_request("Você não tem permissão para realizar esta ação.")
 
+        # Atualização do contato
+        sucesso = updateContato(contato_id, id_usuario_logado, contato.nome, contato.email, telefone_limpo)
         
-        return updateContato(contato_id, contato.nome, contato.email, telefone_limpo)
+        if not sucesso:
+            return bad_request("Contato não encontrado ou acesso não autorizado.")
+        
+        return ok("Contato atualizado com sucesso.")
     
     except Exception as e:
         return server_error(f"Erro ao atualizar contato: {str(e)}")
-# -----------------------
-# Rota que exclui um contato
-# -----------------------
+
 @router.delete("/delete/{contato_id}")
 async def excluir_contato(contato_id: int, id_usuario_logado: int = Depends(decodificar_token)):
+    """
+    Exclui um contato existente.
+    
+    Args:
+        contato_id (int): ID do contato a ser excluído
+        id_usuario_logado (int): ID do usuário autenticado
+    
+    Returns:
+        JSONResponse: Mensagem de sucesso ou erro
+    
+    Validations:
+        - ID do contato deve ser positivo
+        - Contato deve pertencer ao usuário
+    """
     try:
         if contato_id <= 0:
             return bad_request("ID inválido. Deve ser positivo.")
-        else:
-            usuario = getUsuarioById(id_usuario_logado)  
-            if not usuario:
-                return bad_request("Usuário não encontrado.")
-            if usuario["id"] != id_usuario_logado:
-                return bad_request("Você não tem permissão para realizar esta ação.")
-            
-            return deleteContato(contato_id)
+        
+        # Exclusão do contato
+        sucesso = deleteContato(contato_id, id_usuario_logado)
+        
+        if not sucesso:
+            return bad_request("Contato não encontrado ou acesso não autorizado.")
+        
+        return ok("Contato deletado com sucesso.")
     except Exception as e:
         return server_error(f"Erro ao excluir contato: {str(e)}")
